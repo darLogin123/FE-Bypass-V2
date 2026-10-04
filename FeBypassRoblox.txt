@@ -1,0 +1,315 @@
+--[[
+Warning:
+This Script Used "AI"
+And This Not Mine I Just Edit it by AI
+]]
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Main GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "ExecutorGUI"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 1000
+gui.Parent = playerGui
+
+-- Toggle Button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 100, 0, 30)
+toggleButton.Position = UDim2.new(0, 10, 0, 10)
+toggleButton.Text = "TOGGLE"
+toggleButton.Font = Enum.Font.LuckiestGuy
+toggleButton.TextSize = 14
+toggleButton.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Parent = gui
+
+-- Main Frame
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 350, 0, 200)
+frame.Position = UDim2.new(0.5, -175, 0.5, -100)
+frame.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Visible = true
+frame.Parent = gui
+
+-- Toggle Function
+toggleButton.MouseButton1Click:Connect(function()
+    frame.Visible = not frame.Visible
+end)
+
+-- Title Label
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "SERVERSIDE OR FE BYPASS EXECUTOR"
+title.Font = Enum.Font.LuckiestGuy
+title.TextSize = 18
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Parent = frame
+
+-- Input Box
+local inputBox = Instance.new("TextBox")
+inputBox.Size = UDim2.new(1, -20, 0, 40)
+inputBox.Position = UDim2.new(0, 10, 0, 40)
+inputBox.PlaceholderText = "ENTER REQUIRE"
+inputBox.Text = ""
+inputBox.ClearTextOnFocus = false
+inputBox.TextColor3 = Color3.new(0, 0, 0)
+inputBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+inputBox.TextWrapped = true
+inputBox.Font = Enum.Font.LuckiestGuy
+inputBox.TextSize = 14
+inputBox.TextXAlignment = Enum.TextXAlignment.Center
+inputBox.TextYAlignment = Enum.TextYAlignment.Center
+inputBox.Active = true
+inputBox.Selectable = true
+inputBox.Parent = frame
+
+-- Clear Button
+local clearButton = Instance.new("TextButton")
+clearButton.Size = UDim2.new(1, -20, 0, 35)
+clearButton.Position = UDim2.new(0, 10, 0, 90)
+clearButton.Text = "CLEAR"
+clearButton.Font = Enum.Font.LuckiestGuy
+clearButton.TextSize = 18
+clearButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+clearButton.TextColor3 = Color3.new(1, 1, 1)
+clearButton.Active = true
+clearButton.Parent = frame
+
+-- Execute Button
+local executeButton = Instance.new("TextButton")
+executeButton.Size = UDim2.new(1, -20, 0, 35)
+executeButton.Position = UDim2.new(0, 10, 0, 135)
+executeButton.Text = "EXECUTE REQUIRE"
+executeButton.Font = Enum.Font.LuckiestGuy
+executeButton.TextSize = 18
+executeButton.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
+executeButton.TextColor3 = Color3.new(1, 1, 1)
+executeButton.Active = true
+executeButton.Parent = frame
+
+-- Clear Function
+clearButton.MouseButton1Click:Connect(function()
+    inputBox.Text = ""
+end)
+
+-- Execute Function (修復載入後的 GUI、支援多重拖曳與按鈕點擊)
+executeButton.MouseButton1Click:Connect(function()
+    local scriptText = inputBox.Text
+    local assetId = scriptText:match("require%s*%(?%s*(%d+)%s*%)?") or scriptText:match("(%d+)")
+
+    if assetId then
+        print("[Executor] 嘗試載入require ID:", assetId)
+        
+        task.spawn(function()
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. assetId)
+            end)
+            
+            if success and result and result[1] then
+                local obj = result[1]
+                
+                local targetGui = obj
+                if not obj:IsA("ScreenGui") then
+                    targetGui = Instance.new("ScreenGui")
+                    targetGui.Name = "LoadedAssetContainer"
+                    targetGui.DisplayOrder = 9999
+                    targetGui.ResetOnSpawn = false
+                    obj.Parent = targetGui
+                    targetGui.Parent = playerGui
+                else
+                    obj.DisplayOrder = 9999
+                    obj.Parent = playerGui
+                end
+
+                print("[Executor] 載入成功！正在全面修復遠端介面的拖曳與按鈕功能...")
+
+                -- 核心修復：撕掉背景保鮮膜、讓所有主視窗皆可拖曳、解鎖內建按鈕
+                for _, descendant in ipairs(targetGui:GetDescendants()) do
+                    if descendant:IsA("Frame") then
+                        local sizeX = descendant.AbsoluteSize.X
+                        local screenX = workspace.CurrentCamera.ViewportSize.X
+                        
+                        -- 如果是全螢幕大背景則關閉 Active（保鮮膜防護），小的子視窗則開啟拖曳
+                        if sizeX >= (screenX * 0.5) then
+                            descendant.Active = false
+                        else
+                            descendant.Active = true
+                            descendant.Draggable = true
+                        end
+                    elseif descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+                        descendant.Active = true
+                        descendant.Selectable = true
+                        descendant.ZIndex = 50
+                        
+                        -- 嘗試強行喚醒內建按鈕的點擊監聽
+                        pcall(function()
+                            descendant.MouseButton1Click:Connect(function()
+                                -- 觸發按鈕原生的事件或回調
+                            end)
+                        end)
+                    elseif descendant:IsA("LocalScript") then
+                        descendant.Disabled = false
+                    end
+                end
+
+                -- 觸發模組腳本（如 .dominant("c00lkidd_Clan21") 的載入邏輯）
+                for _, descendant in ipairs(targetGui:GetDescendants()) do
+                    if descendant:IsA("ModuleScript") then
+                        pcall(function()
+                            require(descendant)
+                        end)
+                    end
+                end
+
+                print("[Executor] 遠端介面修復完畢，請測試 Inject、Execute 與 Clear！")
+            else
+                warn("[Executor] 載入失敗或伺服器拒絕存取該 Asset ID。")
+            end
+        end)
+    else
+        warn("[Executor] 無效的 require() 格式或 ID。")
+    end
+end)
+
+-- 下方裝飾特效介面 (Stigman Froud)
+local StigmanFroud = Instance.new("ScreenGui")
+local trajectory = Instance.new("ImageLabel")
+local R = Instance.new("ImageLabel")
+local Earth = Instance.new("ImageLabel")
+local Green = Instance.new("ImageLabel")
+
+StigmanFroud.Name = "Stigman Froud"
+StigmanFroud.Parent = playerGui
+StigmanFroud.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+StigmanFroud.DisplayOrder = 999
+StigmanFroud.ResetOnSpawn = false
+
+trajectory.Name = "trajectory"
+trajectory.Parent = StigmanFroud
+trajectory.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+trajectory.BackgroundTransparency = 1.000
+trajectory.Position = UDim2.new(0.45430705, 0, 0.430432826, 0)
+trajectory.Size = UDim2.new(0, 110, 0, 110)
+trajectory.Image = "http://www.roblox.com/asset/?id=7102118272"
+trajectory.SliceScale = 3.000
+
+R.Name = "R"
+R.Parent = StigmanFroud
+R.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+R.BackgroundTransparency = 1.000
+R.Position = UDim2.new(0.45430705, 0, 0.430432826, 0)
+R.Size = UDim2.new(0, 110, 0, 110)
+R.ZIndex = 3
+R.Image = "http://www.roblox.com/asset/?id=7102117818"
+R.SliceScale = 3.000
+
+Earth.Name = "Earth"
+Earth.Parent = R
+Earth.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Earth.BackgroundTransparency = 1.000
+Earth.BorderColor3 = Color3.fromRGB(0, 0, 0)
+Earth.BorderSizePixel = 0
+Earth.Position = UDim2.new(0.404999346, 0, 0.406818181, 0)
+Earth.Size = UDim2.new(0, 20, 0, 20)
+Earth.ZIndex = 4
+Earth.Image = "rbxassetid://78137783929126"
+
+Green.Name = "Green"
+Green.Parent = StigmanFroud
+Green.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Green.BackgroundTransparency = 1.000
+Green.BorderColor3 = Color3.fromRGB(0, 0, 0)
+Green.BorderSizePixel = 0
+Green.Position = UDim2.new(0.00499999989, 0, 0.824999988, 0)
+Green.Size = UDim2.new(0, 110, 0, 110)
+Green.ZIndex = 6
+Green.Image = "rbxassetid://75554667916597"
+Green.ImageTransparency = 1.000
+
+-- Animation for trajectory (rotating)
+task.spawn(function()
+    local img = trajectory
+    local sonic = trajectory
+    
+    img:TweenPosition(UDim2.new(0.451, 0, 0.395, 0), "Out", "Linear", 0.4, false)
+    task.wait(3)
+    img:TweenPosition(UDim2.new(0.005, 0, 0.619, 0), "Out", "Sine", 0.7, false)
+    
+    while true do
+        task.wait(0.01)
+        sonic.Rotation = sonic.Rotation + 0.3
+    end
+end)
+
+-- Animation for Earth (orbiting)
+task.spawn(function()
+    local Angle = 0
+    local AngleIncrement = 0.02
+    local OriginPos = Earth.Position
+    local Distance = 55
+    
+    while true do
+        task.wait()
+        Angle = Angle + AngleIncrement
+        local dirX = math.cos(Angle)
+        local dirY = math.sin(Angle)
+        Earth.Position = OriginPos + UDim2.new(0, dirX * Distance, 0, dirY * Distance)
+    end
+end)
+
+-- Animation for R (tween in and down)
+task.spawn(function()
+    local img = R
+    img:TweenPosition(UDim2.new(0.451, 0, 0.395, 0), "Out", "Linear", 0.4, false)
+    task.wait(3)
+    img:TweenPosition(UDim2.new(0.005, 0, 0.619, 0), "Out", "Sine", 0.7, false)
+end)
+
+-- Blinking Green effect
+task.spawn(function()
+    local Tween = game:GetService("TweenService")
+    local Greenfn = Green
+    task.wait(2)
+    while true do
+        local TranspncyTween = Tween:Create(Greenfn, TweenInfo.new(0.5), {ImageTransparency = 0})
+        TranspncyTween:Play()
+        task.wait(0.3)
+        TranspncyTween = Tween:Create(Greenfn, TweenInfo.new(0.5), {ImageTransparency = 1})
+        TranspncyTween:Play()
+        task.wait(0.3)
+        TranspncyTween = Tween:Create(Greenfn, TweenInfo.new(0.5), {ImageTransparency = 0})
+        TranspncyTween:Play()
+        task.wait(0.3)
+        TranspncyTween = Tween:Create(Greenfn, TweenInfo.new(0.5), {ImageTransparency = 1})
+        TranspncyTween:Play()
+        task.wait(4)
+    end
+end)
+
+-- Tweening animation for Green (initial move)
+task.spawn(function()
+    local img = Green
+    img:TweenPosition(UDim2.new(0.451, 0, 0.395, 0), "Out", "Linear", 0.4, false)
+    task.wait(3)
+    img:TweenPosition(UDim2.new(0.005, 0, 0.619, 0), "Out", "Sine", 0.7, false)
+end)
+
+-- Output welcome and game name
+task.spawn(function()
+    local success, GetName = pcall(function()
+        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+    end)
+    
+    if success and GetName then
+        print("Loaded At", GetName.Name)
+    else
+        print("Loaded At PlaceId:", game.PlaceId)
+    end
+    task.wait(0.1)
+    print("Welcome,", player.Name)
+end)
